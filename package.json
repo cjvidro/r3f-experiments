@@ -6,7 +6,7 @@
     "@react-spring/core": "^9.4.5",
     "@react-spring/three": "^9.4.5",
     "@react-spring/web": "^9.4.5",
-    "@react-three/drei": "^9.11.2",
+    "@react-three/drei": "^9.13.0",
     "@react-three/fiber": "^8.0.19",
     "@testing-library/jest-dom": "^5.16.4",
     "@testing-library/react": "^13.2.0",
