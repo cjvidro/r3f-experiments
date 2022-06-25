@@ -1,0 +1,46 @@
+{
+  "name": "r3f-template",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@react-spring/core": "^9.4.5",
+    "@react-spring/three": "^9.4.5",
+    "@react-spring/web": "^9.4.5",
+    "@react-three/drei": "^9.11.2",
+    "@react-three/fiber": "^8.0.19",
+    "@testing-library/jest-dom": "^5.16.4",
+    "@testing-library/react": "^13.2.0",
+    "@testing-library/user-event": "^14.2.0",
+    "aphrodite": "^2.4.0",
+    "react": "^18.1.0",
+    "react-dom": "^18.1.0",
+    "react-scripts": "^5.0.1",
+    "three": "^0.140.2",
+    "web-vitals": "^2.1.4",
+    "zustand": "^3.7.2"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}
