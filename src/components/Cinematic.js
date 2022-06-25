@@ -18,5 +18,5 @@ export default function Cinematic() {
     return () => {
       document.removeEventListener("keydown", cinematicMode, false);
     };
-  }, []);
+  }, [cinematicMode]);
 }
