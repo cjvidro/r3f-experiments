@@ -1,62 +1,28 @@
 import './App.css';
-import {OrbitControls, OrthographicCamera, Stats} from '@react-three/drei';
-import {Canvas, useFrame} from '@react-three/fiber';
+import {OrbitControls, Stats} from '@react-three/drei';
+import {Canvas} from '@react-three/fiber';
 import React, {useLayoutEffect, useRef, useState} from "react";
-import {Color, Matrix4, Object3D, Vector3, VertexColors} from "three";
+import {BoxGeometry, Color, Object3D, Vector3, VertexColors} from "three";
 import Cinematic from "./components/Cinematic";
+import {lerp} from "three/src/math/MathUtils";
 
-const size = 25;
-const length = size * size;
 const o = new Object3D();
 const c = new Color();
-const niceColor = ["#43435d", "#755ff7", "#dd56a7"];
-const colors = Array.from({length}, () => niceColor[Math.floor(Math.random() * 3)]);
 
-function Boxes() {
+function Boxes({size = 50, slopeMin = 30, slopeMax=36}) {
   const ref = useRef();
+  const length = size * size;
+  const niceColor = ["#43435d", "#755ff7", "#dd56a7"];
+  const colors = Array.from({length}, () => niceColor[Math.floor(Math.random() * 3)]);
 
   let boxList = Array.from(Array(size), () => new Array(size));
   let numElementsToDisplay = 0;
 
   for (let x = 0; x < size; x++) {
     for (let y = 0; y < size; y++) {
-      const shouldDisplay = Math.round(Math.random() * 1.2);
+      const shouldDisplay = 1;//Math.round(Math.random() * 1.2);
       numElementsToDisplay += shouldDisplay;
-      boxList[x][y] = shouldDisplay;
-    }
-  }
-
-  // remove standalone boxes
-  for (let x = 0; x < size; x++) {
-    for (let y = 0; y < size; y++) {
-      if (boxList[x][y]) {
-        let isNotIsolated = false;
-
-        // check left
-        if (x > 0) {
-          isNotIsolated = isNotIsolated || boxList[x - 1][y];
-        }
-
-        // check up
-        if (y < size - 1) {
-          isNotIsolated = isNotIsolated || boxList[x][y + 1];
-        }
-
-        // check right
-        if (x < size - 1) {
-          isNotIsolated = isNotIsolated || boxList[x + 1][y];
-        }
-
-        // check down
-        if (y > 0) {
-          isNotIsolated = isNotIsolated || boxList[x][y - 1];
-        }
-
-        if (!isNotIsolated) {
-          numElementsToDisplay--;
-          boxList[x][y] = isNotIsolated;
-        }
-      }
+      boxList[x][y] = {shouldDisplay: shouldDisplay};
     }
   }
 
@@ -66,65 +32,64 @@ function Boxes() {
     let i = 0;
     for (let x = 0; x < size; x++) {
       for (let z = 0; z < size; z++) {
-        if (boxList[x][z]) {
-          const id = i++;
-          const scaleAmount = 20;
-          o.scale.set(0.9, 0.2, 0.9);
-          o.position.set(size / 2 - x, 0, size / 2 - z);
 
-          const shouldScale = Math.round(Math.random() / 1.85);
-          if (shouldScale) {
-            o.scale.set(0.9, scaleAmount, 0.9);
-            o.position.set(size / 2 - x, -scaleAmount / 2 + 0.1, size / 2 - z);
-          }
+        let prevMaxX = 0;
+        let prevMaxY = 0;
+        let prevRot = 0;
+        let curSize = new Vector3(0.9, 0.2, 0.9);
 
-          o.updateMatrix();
-          ref.current.setMatrixAt(id, o.matrix)
-        }
-      }
-    }
-
-    ref.current.instanceMatrix.needsUpdate = true;
-  }, []);
-
-  let moveState = Array.from({length: numElementsToDisplay}, () => 0);
-  useFrame(() => {
-    for (let i = 0; i < numElementsToDisplay; i++) {
-
-      // Random chance to start "movement"
-      if (moveState[i] === 0) {
-        const shouldMove = Math.round(Math.random() / 1.999);
-        moveState[i] = shouldMove ? Math.PI / 100 : 0;
-      }
-
-      // Control movement
-      if (moveState[i] !== 0) {
-        const timeline = Math.sin(moveState[i]) / 2;
-
-        let matrix = new Matrix4();
-        ref.current.getMatrixAt(i, matrix);
-        let oldScale = new Vector3().setFromMatrixScale(matrix);
-        let oldPosition = new Vector3().setFromMatrixPosition(matrix);
-
-        let newScale = new Vector3(oldScale.x, oldScale.y, oldScale.z);
-        let newPosition = new Vector3(oldPosition.x, timeline, oldPosition.z);
-
-        // Reset to base if animation is "done"
-        if (moveState[i] >= Math.PI) {
-          moveState[i] = 0;
-          newPosition.y = 0;
-        } else {
-          moveState[i] += Math.PI / 100;
+        // Set the previous row's max sizes;
+        if (x !== 0) {
+          prevMaxX = Math.min(boxList[x-1][z].boundingBox.max.x, boxList[x-1][z].boundingBox.min.x);
+          prevMaxY = boxList[x-1][z].boundingBox.max.y;
+          prevRot = boxList[x-1][z].rotation;
         }
 
-        o.scale.set(newScale.x, newScale.y, newScale.z);
-        o.position.set(newPosition.x, -newScale.y / 2 + 0.1 + newPosition.y, newPosition.z);
+        // set the rotation
+        let rot = prevRot;
+        if (slopeMin <= x && x <= slopeMax) {
+          rot = lerp(0, -Math.PI/2, (x-slopeMin)/(slopeMax-slopeMin));
+        }
+
+        // Set the scale, rotation, and position so that we can compute the new height and depth of the current box
+        o.scale.set(0.9, 0.2, 0.9);
+        o.rotation.set(0, 0, rot);
+        o.position.set(0, 0, 0);
         o.updateMatrix();
-        ref.current.setMatrixAt(i, o.matrix);
+
+        let b = new BoxGeometry(1, 1, 1);
+        b.applyMatrix4(o.matrix);
+        b.computeBoundingBox();
+        b.boundingBox.getSize(curSize);
+
+        // Set the position of the box according to the center
+        if (rot === 0) {
+          o.position.set(prevMaxX - curSize.x/2 -0.1, prevMaxY - curSize.y/2, size/2.0 - z);
+        } else if (rot -0.01 < -Math.PI/2) {
+          o.position.set(prevMaxX + curSize.x/2, prevMaxY + curSize.y/2 + 0.1, size/2.0 - z);
+        } else {
+          o.position.set(prevMaxX - curSize.x/2, prevMaxY + curSize.y/2, size/2.0 - z);
+        }
+        o.updateMatrix();
+
+        // Display the box if it should be displayed
+        if (boxList[x][z].shouldDisplay) {
+          const id = i++;
+
+          ref.current.setMatrixAt(id, o.matrix);
+        }
+
+        // Store the updated bounding box once it is in position
+        b = new BoxGeometry(1, 1, 1);
+        b.applyMatrix4(o.matrix);
+        b.computeBoundingBox();
+        boxList[x][z].boundingBox = b.boundingBox;
+        boxList[x][z].rotation = rot;
       }
     }
+
     ref.current.instanceMatrix.needsUpdate = true;
-  });
+  }, );
 
   return (
     <instancedMesh ref={ref} args={[null, null, numElementsToDisplay]}>
@@ -141,24 +106,15 @@ function App() {
     <>
       <Cinematic/>
       <Canvas>
-        <OrthographicCamera
-          makeDefault
-          zoom={5}
-          position={[-5, 8, -5]}
-          left={-size}
-          right={size}
-          top={size}
-          bottom={-size}
-          near={-2000}
-          far={2000}
-        />
         <color attach="background" args={["#121316"]}/>
-        <fog attach="fog" args={["#121316", 5, 20]}/>
+        {/*<fog attach="fog" args={["#121316", 5, 20]}/>*/}
         <hemisphereLight position={[0, 1, 0]} color="#d3d3d3" intensity={1}/>
         <directionalLight position={[0, 10, 0]} color="#FFFFFF" intensity={2}/>
         <directionalLight position={[2, 2, 2]} color="#d3d3d3" intensity={5}/>
-        <OrbitControls makeDefault enablePan={false}/>
+        <OrbitControls makeDefault/>
         <Boxes/>
+        <axesHelper />
+        <gridHelper />
         <Stats/>
       </Canvas>
     </>
