@@ -1,26 +1,32 @@
 import './App.css';
-import {OrbitControls, Stats} from '@react-three/drei';
-import {Canvas} from '@react-three/fiber';
-import React, {useLayoutEffect, useRef, useState} from "react";
+import {OrbitControls, PerspectiveCamera, Stats} from '@react-three/drei';
+import {Canvas, useThree} from '@react-three/fiber';
+import React, {useEffect, useLayoutEffect, useRef, useState} from "react";
 import {BoxGeometry, Color, Object3D, Vector3, VertexColors} from "three";
 import Cinematic from "./components/Cinematic";
 import {lerp} from "three/src/math/MathUtils";
+import {Bloom, EffectComposer, Vignette} from "@react-three/postprocessing";
 
 const o = new Object3D();
 const c = new Color();
 
-function Boxes({size = 50, slopeMin = 30, slopeMax=36}) {
+function Boxes({size = 100, slopeMin = 30, slopeMax=36}) {
   const ref = useRef();
   const length = size * size;
-  const niceColor = ["#43435d", "#755ff7", "#dd56a7"];
-  const colors = Array.from({length}, () => niceColor[Math.floor(Math.random() * 3)]);
+  const niceColor = ["#FF0202", "#FF7B02", "#FFFC02", "#00FF28", "#02FFE1", "#000AFF", "#CC00FF", "#FF0063"];
+  const colors = Array.from({length}, () => niceColor[Math.floor(Math.random() * 8)]);
 
   let boxList = Array.from(Array(size), () => new Array(size));
   let numElementsToDisplay = 0;
 
   for (let x = 0; x < size; x++) {
     for (let y = 0; y < size; y++) {
-      const shouldDisplay = 1;//Math.round(Math.random() * 1.2);
+      let shouldDisplay = Math.round(Math.random() * 3);
+      if (y < 40) {
+        shouldDisplay = Math.round(Math.random() * y/size * 2.6);
+      } else if (y > size - 40) {
+        shouldDisplay = Math.round(Math.random() * (size-y)/size * 2.63);
+      }
       numElementsToDisplay += shouldDisplay;
       boxList[x][y] = {shouldDisplay: shouldDisplay};
     }
@@ -36,7 +42,7 @@ function Boxes({size = 50, slopeMin = 30, slopeMax=36}) {
         let prevMaxX = 0;
         let prevMaxY = 0;
         let prevRot = 0;
-        let curSize = new Vector3(0.9, 0.2, 0.9);
+        let curSize = new Vector3(0.9, 0.001, 0.9);
 
         // Set the previous row's max sizes;
         if (x !== 0) {
@@ -52,7 +58,7 @@ function Boxes({size = 50, slopeMin = 30, slopeMax=36}) {
         }
 
         // Set the scale, rotation, and position so that we can compute the new height and depth of the current box
-        o.scale.set(0.9, 0.2, 0.9);
+        o.scale.set(0.9, 0.001, 0.9);
         o.rotation.set(0, 0, rot);
         o.position.set(0, 0, 0);
         o.updateMatrix();
@@ -101,20 +107,38 @@ function Boxes({size = 50, slopeMin = 30, slopeMax=36}) {
   )
 }
 
+function CameraPositioning() {
+  const camera = useThree((s) => s.camera);
+  useEffect(() => {
+    camera.lookAt(-30, 4, 0);
+  }, [camera]);
+
+  return null;
+}
+
+function Effects() {
+  return (
+    <EffectComposer multisampling={0}>
+      <Vignette eskil={false} offset={0.05} darkness={1.1} />
+      <Bloom intensity={0.3} />
+    </EffectComposer>
+  )
+}
+
 function App() {
   return (
     <>
       <Cinematic/>
-      <Canvas>
+      <Canvas >
         <color attach="background" args={["#121316"]}/>
-        {/*<fog attach="fog" args={["#121316", 5, 20]}/>*/}
-        <hemisphereLight position={[0, 1, 0]} color="#d3d3d3" intensity={1}/>
-        <directionalLight position={[0, 10, 0]} color="#FFFFFF" intensity={2}/>
-        <directionalLight position={[2, 2, 2]} color="#d3d3d3" intensity={5}/>
-        <OrbitControls makeDefault/>
+        {/*<hemisphereLight position={[0, 1, 0]} color="#d3d3d3" intensity={1}/>*/}
+        <directionalLight position={[0.4, 1, 0]} color="#FFFFFF" intensity={0.5}/>
+        <directionalLight position={[1, 0, 0]} color="#d3d3d3" intensity={2}/>
+        <PerspectiveCamera position={[0, 3, 0]} makeDefault />
+        {/*<OrbitControls makeDefault/>*/}
         <Boxes/>
-        <axesHelper />
-        <gridHelper />
+        <CameraPositioning/>
+        <Effects/>
         <Stats/>
       </Canvas>
     </>
